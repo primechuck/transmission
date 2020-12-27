@@ -106,7 +106,7 @@ static struct tr_option const options[] =
     { 'a', "allowed", "Allowed IP addresses. (Default: " TR_DEFAULT_RPC_WHITELIST ")", "a", true, "<list>" },
     { 'b', "blocklist", "Enable peer blocklists", "b", false, NULL },
     { 'B', "no-blocklist", "Disable peer blocklists", "B", false, NULL },
-    { 'c', "watch-dir", "Where to watch for new .torrent files", "c", true, "<directory>" },
+    { 'c', "watch-dir", "Where to watch for new .torrent and .magnet files", "c", true, "<directory>" },
     { 'C', "no-watch-dir", "Disable the watch-dir", "C", false, NULL },
     { 941, "incomplete-dir", "Where to store new torrents until they're complete", NULL, true, "<directory>" },
     { 942, "no-incomplete-dir", "Don't store incomplete torrents in a different location", NULL, false, NULL },
@@ -206,7 +206,7 @@ static tr_watchdir_status onFileAdded(tr_watchdir_t dir, char const* name, void*
 {
     tr_session const* session = context;
 
-    if (!tr_str_has_suffix(name, ".torrent"))
+    if (!tr_str_has_suffix(name, ".torrent") && !tr_str_has_suffix(name, ".magnet") )
     {
         return TR_WATCHDIR_IGNORE;
     }
@@ -221,24 +221,24 @@ static tr_watchdir_status onFileAdded(tr_watchdir_t dir, char const* name, void*
 
         if (err == TR_PARSE_ERR)
         {
-            tr_logAddError("Error parsing .torrent file \"%s\"", name);
+            tr_logAddError("Error parsing file \"%s\"", name);
         }
         else
         {
             bool trash = false;
             bool const test = tr_ctorGetDeleteSource(ctor, &trash);
 
-            tr_logAddInfo("Parsing .torrent file successful \"%s\"", name);
+            tr_logAddInfo("Parsing file successful \"%s\"", name);
 
             if (test && trash)
             {
                 tr_error* error = NULL;
 
-                tr_logAddInfo("Deleting input .torrent file \"%s\"", name);
+                tr_logAddInfo("Deleting input file \"%s\"", name);
 
                 if (!tr_sys_path_remove(filename, &error))
                 {
-                    tr_logAddError("Error deleting .torrent file: %s", error->message);
+                    tr_logAddError("Error deleting file: %s", error->message);
                     tr_error_free(error);
                 }
             }
@@ -711,10 +711,10 @@ static int daemon_start(void* raw_arg, bool foreground)
 
         if (tr_variantDictFindStr(settings, TR_KEY_watch_dir, &dir, NULL) && !tr_str_is_empty(dir))
         {
-            tr_logAddInfo("Watching \"%s\" for new .torrent files", dir);
+            tr_logAddInfo("Watching \"%s\" for new .torrent and .magnet files", dir);
 
             if ((watchdir = tr_watchdir_new(dir, &onFileAdded, mySession, ev_base, force_generic)) == NULL)
-            {
+            { 
                 goto CLEANUP;
             }
         }
